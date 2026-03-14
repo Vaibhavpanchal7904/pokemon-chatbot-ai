@@ -1,83 +1,104 @@
-async function sendMessage(){
-
-const input = document.getElementById("message-input");
 const chatBox = document.getElementById("chat-box");
-const typing = document.getElementById("typing-indicator");
+const input = document.getElementById("message-input");
+const typingIndicator = document.getElementById("typing-indicator");
 
-const message = input.value.trim();
 
-if(message === ""){
-alert("Please enter a message");
-return;
+// ENTER KEY SEND
+function handleKey(event) {
+    if (event.key === "Enter") {
+        sendMessage();
+    }
 }
 
-/* USER MESSAGE */
 
-const userDiv = document.createElement("div");
-userDiv.className = "user-message";
-userDiv.innerText = message;
+// SEND MESSAGE
+async function sendMessage() {
 
-chatBox.appendChild(userDiv);
+    const message = input.value.trim();
 
-input.value = "";
+    if (!message) return;
 
-/* SHOW TYPING */
+    // USER MESSAGE
+    const userMessage = document.createElement("div");
+    userMessage.className = "user-message";
+    userMessage.innerText = message;
 
-typing.classList.remove("d-none");
+    chatBox.appendChild(userMessage);
 
-chatBox.scrollTop = chatBox.scrollHeight;
+    input.value = "";
 
-try{
+    scrollToBottom();
 
-const response = await fetch("http://127.0.0.1:8000/chat",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({message:message})
-});
+    // SHOW TYPING
+    typingIndicator.classList.remove("d-none");
 
-/* SERVER ERROR */
+    try {
 
-if(!response.ok){
-throw new Error("Server error");
+        const response = await fetch("http://localhost:8000/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: message
+            })
+        });
+
+        const data = await response.json();
+
+        // HIDE TYPING
+        typingIndicator.classList.add("d-none");
+
+        // BOT MESSAGE CONTAINER
+        const botMessage = document.createElement("div");
+        botMessage.className = "bot-message";
+
+        chatBox.appendChild(botMessage);
+
+        // TYPE TEXT LIKE AI
+        typeMessage(botMessage, data.reply);
+
+        scrollToBottom();
+
+    } catch (error) {
+
+        typingIndicator.classList.add("d-none");
+
+        const errorMessage = document.createElement("div");
+        errorMessage.className = "bot-message";
+        errorMessage.innerText = "⚠️ Server error. Please try again.";
+
+        chatBox.appendChild(errorMessage);
+
+        scrollToBottom();
+    }
 }
 
-const data = await response.json();
 
-/* HIDE TYPING */
+// AI TYPING EFFECT
+function typeMessage(element, text, speed = 15) {
 
-typing.classList.add("d-none");
+    let i = 0;
 
-/* BOT MESSAGE */
+    function typing() {
 
-const botDiv = document.createElement("div");
-botDiv.className = "bot-message";
-botDiv.innerText = data.reply || "No response received";
+        if (i < text.length) {
 
-chatBox.appendChild(botDiv);
+            element.innerHTML += text.charAt(i);
 
-chatBox.scrollTop = chatBox.scrollHeight;
+            i++;
 
-}catch(error){
+            scrollToBottom();
 
-typing.classList.add("d-none");
+            setTimeout(typing, speed);
+        }
+    }
 
-const errorDiv = document.createElement("div");
-errorDiv.className = "bot-message";
-errorDiv.style.background = "red";
-errorDiv.innerText = "Error connecting to server";
-
-chatBox.appendChild(errorDiv);
-
+    typing();
 }
 
-}
 
-/* ENTER KEY SUPPORT */
-
-function handleKey(event){
-if(event.key === "Enter"){
-sendMessage();
-}
+// AUTO SCROLL
+function scrollToBottom() {
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
